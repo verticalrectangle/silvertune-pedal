@@ -64,6 +64,21 @@ Put the Daisy into DFU mode (hold BOOT, press RESET, release BOOT), then:
 make program-dfu
 ```
 
+## Live vocal setup
+
+The Daisy Seed expects line/instrument level, not raw mic level. You need a preamp or DI box between your mic and the pedal.
+
+```
+Mic (XLR) → Preamp/DI Box (XLR in, 1/4" out) → Silvertune Pedal → PA / Mixer
+```
+
+Cheap options for the preamp/DI:
+- Behringer MicroHD HD400 (~$20)
+- Any small DI box with XLR to 1/4"
+- A mixer's FX send/return loop (preamp is already built in)
+
+Total live rig: mic + DI box + pedal. Under $100 for a working autotune pedal.
+
 ## How it works
 
 1. Audio comes in mono from the guitar/mic jack
