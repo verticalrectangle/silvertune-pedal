@@ -72,7 +72,9 @@ The Daisy Seed expects line/instrument level, not raw mic level. You need a prea
 Mic (XLR) → Preamp/DI Box (XLR in, 1/4" out) → Silvertune Pedal → PA / Mixer
 ```
 
-A small mixer like a Behringer Xenyx 502 (~$40) works perfectly — XLR input with built-in preamp, gain/EQ knobs, and 1/4" output at the right level for the pedal. Small enough to sit next to your pedalboard.
+Two easy options:
+- **USB audio interface** (e.g. Arturia Minifuse 1): Mic → XLR in, turn on direct monitor, 1/4" out → pedal. If you already own one, cost is just the pedal.
+- **Small mixer** (e.g. Behringer Xenyx 502, ~$40): XLR in with built-in preamp, gain/EQ knobs, 1/4" out → pedal. Small enough to sit next to your pedalboard.
 
 ## How it works
 
