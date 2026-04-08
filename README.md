@@ -72,12 +72,7 @@ The Daisy Seed expects line/instrument level, not raw mic level. You need a prea
 Mic (XLR) → Preamp/DI Box (XLR in, 1/4" out) → Silvertune Pedal → PA / Mixer
 ```
 
-Cheap options for the preamp/DI:
-- Behringer MicroHD HD400 (~$20)
-- Any small DI box with XLR to 1/4"
-- A mixer's FX send/return loop (preamp is already built in)
-
-Total live rig: mic + DI box + pedal. Under $100 for a working autotune pedal.
+A Behringer DI100 Ultra-DI (~$25) does the job — XLR in, 1/4" out, built like a tank. Three boxes, three cables, that's the whole rig.
 
 ## How it works
 
