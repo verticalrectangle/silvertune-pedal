@@ -15,7 +15,7 @@ enum {
     KNOB_1 = 0,  // Key
     KNOB_2 = 1,  // Scale
     KNOB_3 = 2,  // Mix
-    KNOB_4 = 3,  // Snap
+    KNOB_4 = 3,  // Tune Strength
     KNOB_5 = 4,  // (future: Character)
     KNOB_6 = 5,  // (unused)
     KNOB_COUNT = 6
