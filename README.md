@@ -15,14 +15,17 @@ Total: ~$60-70. All through-hole. No SMD. Soldering iron and patience.
 
 ## Knobs
 
-| Knob | Function | Range |
-|------|----------|-------|
-| 1 | Key | C through B |
-| 2 | Scale | Major / Minor / Chromatic (3 positions) |
-| 3 | Mix | Dry/Wet blend |
-| 4 | Tune Strength | 0% = no correction, 100% = full robot |
-| 5 | *(reserved)* | Character knob in a future version |
-| 6 | *(unused)* | |
+| Control | Function | Range |
+|---------|----------|-------|
+| Knob 1 | Key | C through B (mark 12 positions) |
+| Knob 2 | *(spare)* | |
+| Knob 3 | Mix | Dry/Wet blend |
+| Knob 4 | Tune Strength | 0% = no correction, 100% = full robot |
+| Knob 5 | *(reserved)* | Character knob in a future version |
+| Knob 6 | *(unused)* | |
+| SW1 | Scale: Major | Up = Major on |
+| SW2 | Scale: Minor | Up = Minor on |
+| SW1+SW2 off | Scale: Chromatic | Both off = no scale correction |
 | Footswitch | Bypass | Toggle on/off |
 | LED | Status | On when engaged |
 

@@ -12,8 +12,8 @@ using namespace daisy;
 
 // Knobs — ADC channels on Daisy Seed
 enum {
-    KNOB_1 = 0,  // Key
-    KNOB_2 = 1,  // Scale
+    KNOB_1 = 0,  // Key (C through B)
+    KNOB_2 = 1,  // (spare)
     KNOB_3 = 2,  // Mix
     KNOB_4 = 3,  // Tune Strength
     KNOB_5 = 4,  // (future: Character)
@@ -26,7 +26,11 @@ static constexpr Pin KNOB_PINS[KNOB_COUNT] = {
     seed::A0, seed::A1, seed::A2, seed::A3, seed::A4, seed::A5
 };
 
-// Footswitch and LED
+// Toggle switches — SW1 = Major, SW2 = Minor, both off = Chromatic
+static constexpr Pin PIN_SW1 = seed::D1;
+static constexpr Pin PIN_SW2 = seed::D2;
+
+// Footswitch and LEDs
 static constexpr Pin PIN_FOOTSWITCH = seed::D25;
 static constexpr Pin PIN_LED        = seed::D22;
 
@@ -34,6 +38,8 @@ static constexpr Pin PIN_LED        = seed::D22;
 
 static DaisySeed hw;
 static Switch footswitch;
+static Switch sw1;
+static Switch sw2;
 static Led led;
 
 static YinDetector yin;
@@ -41,37 +47,39 @@ static GrainShifter shifter;
 
 static bool engaged = true;
 
-// Smoothed knob values
-static float knob_key_raw   = 0.0f;
-static float knob_scale_raw = 0.0f;
-static float knob_mix       = 0.5f;
-static float knob_snap      = 1.0f;
+// Knob values
+static float knob_key_raw = 0.0f;
+static float knob_mix     = 0.5f;
+static float knob_snap    = 1.0f;
 
 // --- Audio callback ---
 
 static void audio_callback(AudioHandle::InputBuffer in,
                             AudioHandle::OutputBuffer out,
                             size_t size) {
-    // Read footswitch (debounced)
+    // Read footswitch and toggles (debounced)
     footswitch.Debounce();
+    sw1.Debounce();
+    sw2.Debounce();
+
     if (footswitch.RisingEdge())
         engaged = !engaged;
 
     // Read knobs
-    knob_key_raw   = hw.adc.GetFloat(KNOB_1);
-    knob_scale_raw = hw.adc.GetFloat(KNOB_2);
-    knob_mix       = hw.adc.GetFloat(KNOB_3);
-    knob_snap      = hw.adc.GetFloat(KNOB_4);
+    knob_key_raw = hw.adc.GetFloat(KNOB_1);
+    knob_mix     = hw.adc.GetFloat(KNOB_3);
+    knob_snap    = hw.adc.GetFloat(KNOB_4);
 
     // Quantize key knob to 0-11
     int root_key = static_cast<int>(knob_key_raw * 11.99f);
     root_key = std::clamp(root_key, 0, 11);
 
-    // Quantize scale knob to 3 positions
+    // Scale from toggle switches:
+    // SW1 on = Major, SW2 on = Minor, both off = Chromatic
     ScaleType scale;
-    if (knob_scale_raw < 0.33f)
+    if (sw1.Pressed())
         scale = SCALE_MAJOR;
-    else if (knob_scale_raw < 0.66f)
+    else if (sw2.Pressed())
         scale = SCALE_MINOR;
     else
         scale = SCALE_CHROMATIC;
@@ -126,8 +134,10 @@ int main(void) {
     hw.adc.Init(adc_cfg, KNOB_COUNT);
     hw.adc.Start();
 
-    // Init footswitch (active low, pulled up internally)
+    // Init footswitch and toggle switches
     footswitch.Init(PIN_FOOTSWITCH, 1000.0f / 48.0f);
+    sw1.Init(PIN_SW1, 1000.0f / 48.0f, Switch::TYPE_TOGGLE, Switch::POLARITY_INVERTED, GPIO::Pull::PULLUP);
+    sw2.Init(PIN_SW2, 1000.0f / 48.0f, Switch::TYPE_TOGGLE, Switch::POLARITY_INVERTED, GPIO::Pull::PULLUP);
 
     // Init LED
     led.Init(PIN_LED, false);
