@@ -9,25 +9,44 @@ Foot on = robot. Foot off = raw. Mid-song. Mid-word.
 - **Daisy Seed** from [Electrosmith](https://www.electro-smith.com/daisy/daisy) (~$30)
 - **Terrarium PCB** from [PedalPCB](https://www.pedalpcb.com/product/pcb351/) (~$10)
 - **125B enclosure** from [Tayda](https://www.taydaelectronics.com/) (~$5, drill with Terrarium template)
-- 6x B100K pots, 2x mono jacks, 1x DC jack, 1x 3PDT footswitch, 1x LED + resistor, pin headers
+- **SSD1306 OLED display** (128x32, I2C) (~$8)
+- 6x B10K right-angle PCB mount pots, 2x mono jacks, 1x DC jack, 1x SPST footswitch, 1x LED + resistor, pin headers
 
-Total: ~$60-70. All through-hole. No SMD. Soldering iron and patience.
+Total: ~$70-80. All through-hole. No SMD. Soldering iron and patience.
 
 ## Knobs
 
 | Control | Function | Range |
 |---------|----------|-------|
 | Knob 1 | Key | C through B (mark 12 positions) |
-| Knob 2 | *(spare)* | |
+| Knob 2 | Scale | Chromatic → Major → Minor |
 | Knob 3 | Mix | Dry/Wet blend |
 | Knob 4 | Tune Strength | 0% = no correction, 100% = full robot |
-| Knob 5 | *(reserved)* | Character knob in a future version |
+| Knob 5 | *(unused)* | |
 | Knob 6 | *(unused)* | |
-| SW1 | Scale: Major | Up = Major on |
-| SW2 | Scale: Minor | Up = Minor on |
-| SW1+SW2 off | Scale: Chromatic | Both off = no scale correction |
 | Footswitch | Bypass | Toggle on/off |
 | LED | Status | On when engaged |
+
+## Display
+
+The OLED shows the current state at a glance:
+
+- **Default (key set):** large key name on top, scale name below — e.g. `C#` / `MAJOR`
+- **Default (chromatic):** just `CHROMATIC` centered
+- **While adjusting a knob:** shows that parameter's value for 2 seconds, then returns — e.g. `MIX: 75%`, `KEY: C#`, `TUNE: 100%`, `SCALE: MAJOR`
+
+The display mirrors the Silvertune plugin interface in a DAW.
+
+## Wiring the OLED
+
+The OLED mounts in a rectangular slot cut in the enclosure face and connects to the Daisy Seed via 4 wires soldered to the Terrarium PCB pin header pads:
+
+| OLED pin | Daisy Seed pin |
+|----------|---------------|
+| SDA      | D12           |
+| SCL      | D11           |
+| VCC      | 3.3V          |
+| GND      | GND           |
 
 ## Build
 

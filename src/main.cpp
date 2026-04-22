@@ -1,107 +1,81 @@
 #include "daisy_seed.h"
+#include "dev/oled_ssd130x.h"
 #include "yin.h"
 #include "grain_shifter.h"
 #include "scale.h"
 #include <cmath>
 #include <algorithm>
+#include <cstdio>
 
 using namespace daisy;
+using MyOled = OledDisplay<SSD130xI2c128x32Driver>;
 
-// --- Terrarium pin mapping ---
-// https://www.pedalpcb.com/docs/Terrarium-Daisy.pdf
-
-// Knobs — ADC channels on Daisy Seed
 enum {
-    KNOB_1 = 0,  // Key (C through B)
-    KNOB_2 = 1,  // (spare)
-    KNOB_3 = 2,  // Mix
-    KNOB_4 = 3,  // Tune Strength
-    KNOB_5 = 4,  // (future: Character)
-    KNOB_6 = 5,  // (unused)
+    KNOB_KEY   = 0,
+    KNOB_SCALE = 1,
+    KNOB_MIX   = 2,
+    KNOB_TUNE  = 3,
     KNOB_COUNT = 6
 };
 
-// Terrarium ADC pin mapping (Seed pin numbers)
 static constexpr Pin KNOB_PINS[KNOB_COUNT] = {
     seed::A0, seed::A1, seed::A2, seed::A3, seed::A4, seed::A5
 };
 
-// Toggle switches — SW1 = Major, SW2 = Minor, both off = Chromatic
-static constexpr Pin PIN_SW1 = seed::D1;
-static constexpr Pin PIN_SW2 = seed::D2;
-
-// Footswitch and LEDs
 static constexpr Pin PIN_FOOTSWITCH = seed::D25;
 static constexpr Pin PIN_LED        = seed::D22;
 
-// --- Globals ---
+static DaisySeed  hw;
+static Switch     footswitch;
+static Led        led;
+static MyOled     display;
 
-static DaisySeed hw;
-static Switch footswitch;
-static Switch sw1;
-static Switch sw2;
-static Led led;
-
-static YinDetector yin;
+static YinDetector  yin;
 static GrainShifter shifter;
 
 static bool engaged = true;
 
-// Knob values
-static float knob_key_raw = 0.0f;
-static float knob_mix     = 0.5f;
-static float knob_snap    = 1.0f;
+static volatile float v_key   = 0.0f;
+static volatile float v_scale = 0.0f;
+static volatile float v_mix   = 0.5f;
+static volatile float v_tune  = 1.0f;
+static volatile int   root_key  = 0;
+static volatile int   scale_idx = 1;  // 0=chromatic, 1=major, 2=minor
 
-// --- Audio callback ---
+static const char* KEY_NAMES[12]  = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" };
+static const char* SCALE_NAMES[3] = { "CHROMATIC", "MAJOR", "MINOR" };
+static const ScaleType SCALE_MAP[3] = { SCALE_CHROMATIC, SCALE_MAJOR, SCALE_MINOR };
 
 static void audio_callback(AudioHandle::InputBuffer in,
                             AudioHandle::OutputBuffer out,
                             size_t size) {
-    // Read footswitch and toggles (debounced)
     footswitch.Debounce();
-    sw1.Debounce();
-    sw2.Debounce();
-
     if (footswitch.RisingEdge())
         engaged = !engaged;
 
-    // Read knobs
-    knob_key_raw = hw.adc.GetFloat(KNOB_1);
-    knob_mix     = hw.adc.GetFloat(KNOB_3);
-    knob_snap    = hw.adc.GetFloat(KNOB_4);
+    v_key   = hw.adc.GetFloat(KNOB_KEY);
+    v_scale = hw.adc.GetFloat(KNOB_SCALE);
+    v_mix   = hw.adc.GetFloat(KNOB_MIX);
+    v_tune  = hw.adc.GetFloat(KNOB_TUNE);
 
-    // Quantize key knob to 0-11
-    int root_key = static_cast<int>(knob_key_raw * 11.99f);
-    root_key = std::clamp(root_key, 0, 11);
+    root_key  = std::clamp((int)(v_key * 11.99f), 0, 11);
+    scale_idx = std::clamp((int)(v_scale * 2.99f), 0, 2);
 
-    // Scale from toggle switches:
-    // SW1 on = Major, SW2 on = Minor, both off = Chromatic
-    ScaleType scale;
-    if (sw1.Pressed())
-        scale = SCALE_MAJOR;
-    else if (sw2.Pressed())
-        scale = SCALE_MINOR;
-    else
-        scale = SCALE_CHROMATIC;
-
-    float snap = std::clamp(knob_snap, 0.0f, 1.0f);
-    float mix  = std::clamp(knob_mix, 0.0f, 1.0f);
+    ScaleType scale = SCALE_MAP[scale_idx];
+    float snap = std::clamp((float)v_tune, 0.0f, 1.0f);
+    float mix  = std::clamp((float)v_mix,  0.0f, 1.0f);
 
     for (size_t i = 0; i < size; ++i) {
         float dry = in[0][i];
 
         if (!engaged) {
-            // Bypass: pass through
             out[0][i] = dry;
             continue;
         }
 
-        // Feed pitch detector
         yin.push(dry);
 
-        // Compute pitch ratio
         float pitch_ratio = 1.0f;
-
         if (yin.pitch_hz > 50.0f && yin.pitch_hz < 2000.0f && yin.confidence > 0.6f) {
             float detected_midi = hz_to_midi(yin.pitch_hz);
             int nearest_midi = quantize_to_scale(
@@ -118,7 +92,24 @@ static void audio_callback(AudioHandle::InputBuffer in,
     }
 }
 
-// --- Main ---
+static void update_display(bool show_temp, const char* temp_msg) {
+    display.Fill(false);
+    if (show_temp) {
+        display.SetCursor(0, 11);
+        display.WriteString(const_cast<char*>(temp_msg), Font_7x10, true);
+    } else if (scale_idx == 0) {
+        display.SetCursor(0, 11);
+        display.WriteString(const_cast<char*>("CHROMATIC"), Font_7x10, true);
+    } else {
+        char key[4];
+        snprintf(key, sizeof(key), "%s", KEY_NAMES[root_key]);
+        display.SetCursor(0, 0);
+        display.WriteString(key, Font_11x18, true);
+        display.SetCursor(0, 22);
+        display.WriteString(const_cast<char*>(SCALE_NAMES[scale_idx]), Font_6x8, true);
+    }
+    display.Update();
+}
 
 int main(void) {
     hw.Init();
@@ -127,34 +118,78 @@ int main(void) {
 
     float sr = hw.AudioSampleRate();
 
-    // Init ADC for 6 knobs
+    // ADC for 6 knobs
     AdcChannelConfig adc_cfg[KNOB_COUNT];
     for (int i = 0; i < KNOB_COUNT; ++i)
         adc_cfg[i].InitSingle(KNOB_PINS[i]);
     hw.adc.Init(adc_cfg, KNOB_COUNT);
     hw.adc.Start();
 
-    // Init footswitch and toggle switches
+    // Footswitch
     footswitch.Init(PIN_FOOTSWITCH, 1000.0f / 48.0f);
-    sw1.Init(PIN_SW1, 1000.0f / 48.0f, Switch::TYPE_TOGGLE, Switch::POLARITY_INVERTED, GPIO::Pull::PULLUP);
-    sw2.Init(PIN_SW2, 1000.0f / 48.0f, Switch::TYPE_TOGGLE, Switch::POLARITY_INVERTED, GPIO::Pull::PULLUP);
 
-    // Init LED
+    // LED
     led.Init(PIN_LED, false);
     led.Set(1.0f);
     led.Update();
 
-    // Init DSP
+    // OLED
+    MyOled::Config oled_cfg;
+    oled_cfg.driver_config.transport_config.i2c_config.periph =
+        I2CHandle::Config::Peripheral::I2C_1;
+    oled_cfg.driver_config.transport_config.i2c_config.speed =
+        I2CHandle::Config::Speed::I2C_400KHZ;
+    oled_cfg.driver_config.transport_config.i2c_config.pin_config.scl = seed::D11;
+    oled_cfg.driver_config.transport_config.i2c_config.pin_config.sda = seed::D12;
+    oled_cfg.driver_config.transport_config.i2c_address = 0x3C;
+    display.Init(oled_cfg);
+
+    // DSP
     yin.init(sr);
     shifter.reset();
 
     // Start audio
     hw.StartAudio(audio_callback);
 
-    // Main loop: just update LED
+    // Snapshot initial knob state so startup doesn't trigger temp messages
+    float prev_key   = v_key;
+    float prev_scale = v_scale;
+    float prev_mix   = v_mix;
+    float prev_tune  = v_tune;
+
+    constexpr float    THRESH  = 0.02f;
+    constexpr uint32_t HOLD_MS = 2000;
+    uint32_t timeout_ms = 0;
+    char     temp_msg[32] = "";
+
     while (true) {
+        uint32_t now = System::GetNow();
+
+        float ck = v_key, cs = v_scale, cm = v_mix, ct = v_tune;
+
+        if (fabsf(ck - prev_key) > THRESH) {
+            snprintf(temp_msg, sizeof(temp_msg), "KEY: %s", KEY_NAMES[root_key]);
+            timeout_ms = now + HOLD_MS;
+            prev_key = ck;
+        } else if (fabsf(cs - prev_scale) > THRESH) {
+            snprintf(temp_msg, sizeof(temp_msg), "SCALE: %s", SCALE_NAMES[scale_idx]);
+            timeout_ms = now + HOLD_MS;
+            prev_scale = cs;
+        } else if (fabsf(cm - prev_mix) > THRESH) {
+            snprintf(temp_msg, sizeof(temp_msg), "MIX: %d%%", (int)(cm * 100));
+            timeout_ms = now + HOLD_MS;
+            prev_mix = cm;
+        } else if (fabsf(ct - prev_tune) > THRESH) {
+            snprintf(temp_msg, sizeof(temp_msg), "TUNE: %d%%", (int)(ct * 100));
+            timeout_ms = now + HOLD_MS;
+            prev_tune = ct;
+        }
+
+        update_display(now < timeout_ms, temp_msg);
+
         led.Set(engaged ? 1.0f : 0.0f);
         led.Update();
-        System::Delay(10);
+
+        System::Delay(50);
     }
 }
