@@ -107,6 +107,20 @@ Two easy options:
 5. Mix knob blends dry and corrected signal
 6. Zero latency. No FFT. No buffering. Sample by sample.
 
+## V2 / custom PCB
+
+The Terrarium is a convenient starting point but includes a lot of components the Daisy Seed doesn't need — it handles everything digitally. A bare perfboard or simple custom PCB would only need:
+
+- Daisy Seed pin headers
+- 4 pots wired directly to ADC pins
+- 2 mono jacks wired to audio in/out
+- 1 footswitch
+- 1 LED + resistor
+- SSD1306 OLED on I2C
+- DC jack + decoupling cap
+
+Total parts ~$15-20 instead of $60-70.
+
 ## License
 
 GPL-3.0 — same as the plugin.
