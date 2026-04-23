@@ -58,37 +58,35 @@ def wire(pts, color, width=2.5):
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 BG         = '#f2f0ed'
-POWER_RED  = '#dd4444'
-GND_GRAY   = '#aaaaaa'
-ADC_BLUE   = '#2266cc'
-I2C_TEAL   = '#0099bb'
+POWER_RED  = '#cc3333'
+GND_GRAY   = '#999999'
+ADC_BLUE   = '#2255bb'
+I2C_TEAL   = '#009988'
 AUDIO_IN   = '#228844'
 AUDIO_OUT  = '#cc3333'
-LED_ORANGE = '#dd7700'
-FS_YELLOW  = '#cc9900'
-SEED_GREEN = '#d8eec8'
-SEED_BORDER= '#6aaa40'
-RAIL_RED   = '#ffdada'
-RAIL_GRAY  = '#d8d6d2'
+LED_ORANGE = '#cc6600'
+FS_YELLOW  = '#997700'
+SEED_GREEN = '#e8f4e8'
+SEED_BDR   = '#5a9a5a'
+RAIL_RED   = '#fde8e8'
+RAIL_GRAY  = '#e8e8e8'
 
 # ─── Background ───────────────────────────────────────────────────────────────
 col(BG); ctx.paint()
 
-txt('SILVERTUNE PEDAL — WIRING DIAGRAM', W/2, 40, 24, 'center', True, '#333333')
-txt('Daisy Seed · 50x100mm stripboard · verify pin positions at electro-smith.com',
-    W/2, 66, 14, 'center', False, '#888888')
+txt('SILVERTUNE PEDAL — WIRING DIAGRAM', W/2, 38, 22, 'center', True, '#333333')
+txt('Daisy Seed Rev7  ·  verify pin positions at electro-smith.com',
+    W/2, 62, 13, 'center', False, '#888888')
 
 # ─── Power Rails ──────────────────────────────────────────────────────────────
-# GND rail
 col(RAIL_GRAY); rrect(12, 130, 30, 720); ctx.fill()
 col('#aaaaaa'); ctx.set_line_width(1.5); rrect(12, 130, 30, 720); ctx.stroke()
 ctx.save(); ctx.translate(27, 490); ctx.rotate(-math.pi/2)
 txt('GND RAIL', 0, 5, 13, 'center', False, '#555555')
 ctx.restore()
 
-# 3V3 rail
 col(RAIL_RED); rrect(48, 130, 26, 720); ctx.fill()
-col('#dd6666'); ctx.set_line_width(1.5); rrect(48, 130, 26, 720); ctx.stroke()
+col('#cc8888'); ctx.set_line_width(1.5); rrect(48, 130, 26, 720); ctx.stroke()
 ctx.save(); ctx.translate(61, 490); ctx.rotate(-math.pi/2)
 txt('3V3 RAIL', 0, 5, 13, 'center', False, '#cc3333')
 ctx.restore()
@@ -96,39 +94,52 @@ ctx.restore()
 # ─── Daisy Seed ───────────────────────────────────────────────────────────────
 DS_X, DS_Y, DS_W, DS_H = 460, 130, 290, 720
 
-col(SEED_GREEN); rrect(DS_X, DS_Y, DS_W, DS_H); ctx.fill()
-col(SEED_BORDER); ctx.set_line_width(3); rrect(DS_X, DS_Y, DS_W, DS_H); ctx.stroke()
-txt('DAISY SEED', DS_X + DS_W/2, 500, 26, 'center', True, '#2a6a10')
+# Pin y-positions: 20 pins per side, evenly spaced
+# Left side: pins 21-40, top to bottom
+# Right side: pins 20-1, top to bottom
+PIN_STEP = DS_H / 19
 
-# Left pins (D-numbered, physical pins)
+def left_pin_y(pin):
+    """Pin 21=top, 40=bottom."""
+    return DS_Y + (pin - 21) * PIN_STEP
+
+def right_pin_y(pin):
+    """Pin 20=top, 1=bottom."""
+    return DS_Y + (20 - pin) * PIN_STEP
+
+col(SEED_GREEN); rrect(DS_X, DS_Y, DS_W, DS_H); ctx.fill()
+col(SEED_BDR); ctx.set_line_width(3); rrect(DS_X, DS_Y, DS_W, DS_H); ctx.stroke()
+txt('DAISY SEED', DS_X + DS_W/2, 500, 24, 'center', True, '#2a6a10')
+
+# Left pins (exit left from DS_X)
 LEFT_PINS = [
-    (215, 'D11  SCL   pin 12'),
-    (245, 'D12  SDA   pin 13'),
-    (360, 'D22        pin 29'),
-    (400, 'D25        pin 32'),
+    (left_pin_y(22), 'A0  pin 22'),
+    (left_pin_y(23), 'A1  pin 23'),
+    (left_pin_y(24), 'A2  pin 24'),
+    (left_pin_y(25), 'A3  pin 25'),
+    (left_pin_y(29), 'D22 pin 29'),
+    (left_pin_y(32), 'D25 pin 32'),
+    (left_pin_y(38), '3V3 pin 38'),
+    (left_pin_y(39), 'VIN pin 39'),
+    (left_pin_y(40), 'GND pin 40'),
 ]
 for py, label in LEFT_PINS:
-    col('#888888'); ctx.set_line_width(2.5)
+    col('#aaaaaa'); ctx.set_line_width(2.5)
     ctx.move_to(DS_X, py); ctx.line_to(DS_X - 25, py); ctx.stroke()
-    txt(label, DS_X - 28, py + 5, 13, 'right', False, '#555555')
+    txt(label, DS_X - 28, py + 5, 12, 'right', False, '#555555')
 
-# Right pins
+# Right pins (exit right from DS_X + DS_W)
 RIGHT_PINS = [
-    (185,  'Audio In 1   pin 16'),
-    (220,  'Audio Out 1  pin 18'),
-    (245,  'AGND         pin 20'),
-    (550,  'A0  (ADC0)   pin 22'),
-    (590,  'A1  (ADC1)   pin 23'),
-    (630,  'A2  (ADC2)   pin 24'),
-    (670,  'A3  (ADC3)   pin 25'),
-    (720,  '3V3 Digital  pin 38'),
-    (760,  'VIN          pin 39'),
-    (800,  'DGND         pin 40'),
+    (right_pin_y(20), 'AGND        pin 20'),
+    (right_pin_y(18), 'Audio Out 1 pin 18'),
+    (right_pin_y(16), 'Audio In 1  pin 16'),
+    (right_pin_y(13), 'D12  SDA    pin 13'),
+    (right_pin_y(12), 'D11  SCL    pin 12'),
 ]
 for py, label in RIGHT_PINS:
-    col('#888888'); ctx.set_line_width(2.5)
+    col('#aaaaaa'); ctx.set_line_width(2.5)
     ctx.move_to(DS_X + DS_W, py); ctx.line_to(DS_X + DS_W + 25, py); ctx.stroke()
-    txt(label, DS_X + DS_W + 30, py + 5, 13, 'left', False, '#555555')
+    txt(label, DS_X + DS_W + 30, py + 5, 12, 'left', False, '#555555')
 
 # ─── OLED ─────────────────────────────────────────────────────────────────────
 col('#eef0f8'); rrect(70, 148, 150, 82); ctx.fill()
@@ -138,15 +149,15 @@ txt('OLED', 145, 186, 16, 'center', True, '#4499ff')
 txt('SSD1306 I2C', 145, 218, 11, 'center', False, '#6688aa')
 
 # ─── LED ──────────────────────────────────────────────────────────────────────
-col('#ffe0e0'); circ(115, 385, 28); ctx.fill()
-col('#dd3311'); ctx.set_line_width(2.5); circ(115, 385, 28); ctx.stroke()
+col('#ffe8e8'); circ(115, 385, 28); ctx.fill()
+col('#cc3311'); ctx.set_line_width(2.5); circ(115, 385, 28); ctx.stroke()
 txt('LED', 115, 390, 13, 'center', True, '#cc2200')
 col('#f5f0e8'); rrect(150, 376, 60, 18); ctx.fill()
 col('#888866'); ctx.set_line_width(1.5); rrect(150, 376, 60, 18); ctx.stroke()
 txt('470 Ohm', 180, 389, 11, 'center', False, '#665500')
 
 # ─── Footswitch ───────────────────────────────────────────────────────────────
-col('#e0dedb'); rrect(68, 470, 130, 80, 40); ctx.fill()
+col('#e8e6e2'); rrect(68, 470, 130, 80, 40); ctx.fill()
 col('#aaaaaa'); ctx.set_line_width(2.5); rrect(68, 470, 130, 80, 40); ctx.stroke()
 txt('FOOT',   133, 505, 14, 'center', True, '#444444')
 txt('SWITCH', 133, 525, 14, 'center', True, '#444444')
@@ -189,43 +200,59 @@ txt('+ center positive -', 610, 952, 12, 'center', False, '#888888')
 
 # ─── Wires ────────────────────────────────────────────────────────────────────
 
-# OLED SDA → D12
-wire([(220, 200), (300, 200), (300, 245), (435, 245)], I2C_TEAL, 2.5)
-# OLED SCL → D11
-wire([(220, 188), (280, 188), (280, 215), (435, 215)], '#006677', 2.5)
+# OLED SDA → D12 (right side, pin 13)
+# Route over the top of the Daisy
+sda_y = right_pin_y(13)
+wire([(220, 188), (DS_X+DS_W+55, 188), (DS_X+DS_W+55, sda_y), (DS_X+DS_W+25, sda_y)], I2C_TEAL, 2.5)
+
+# OLED SCL → D11 (right side, pin 12)
+scl_y = right_pin_y(12)
+wire([(220, 178), (DS_X+DS_W+70, 178), (DS_X+DS_W+70, scl_y), (DS_X+DS_W+25, scl_y)], '#007766', 2.5)
+
 # OLED VCC → 3V3 rail
 wire([(74, 165), (62, 165)], POWER_RED, 2.5)
 # OLED GND → GND rail
 wire([(74, 172), (42, 172)], GND_GRAY, 2.5)
 
-# LED → 470R → D22
+# LED anode → 470R → D22 (left side, pin 29)
+d22_y = left_pin_y(29)
 wire([(143, 385), (150, 385)], LED_ORANGE, 2.5)
-wire([(210, 385), (310, 385), (310, 360), (435, 360)], LED_ORANGE, 2.5)
-# LED GND
-wire([(87, 390), (42, 390)], GND_GRAY, 2.5)
+wire([(210, 385), (DS_X-30, 385), (DS_X-30, d22_y), (DS_X, d22_y)], LED_ORANGE, 2.5)
+# LED cathode → GND rail
+wire([(87, 413), (87, 440), (42, 440)], GND_GRAY, 2.5)
 
-# Footswitch → D25
-wire([(198, 510), (350, 510), (350, 400), (435, 400)], FS_YELLOW, 2.5)
+# Footswitch → D25 (left side, pin 32)
+d25_y = left_pin_y(32)
+wire([(198, 510), (DS_X-45, 510), (DS_X-45, d25_y), (DS_X, d25_y)], FS_YELLOW, 2.5)
 # Footswitch GND
 wire([(198, 520), (42, 520)], GND_GRAY, 2.5)
 
-# IN jack → Audio In 1
-wire([(1060, 179), (840, 179), (840, 185), (750, 185)], AUDIO_IN, 2.5)
-# IN jack sleeve → GND
+# IN jack → Audio In 1 (right side, pin 16)
+ain_y = right_pin_y(16)
+wire([(1060, 179), (DS_X+DS_W+40, 179), (DS_X+DS_W+40, ain_y), (DS_X+DS_W+25, ain_y)], AUDIO_IN, 2.5)
+# IN jack sleeve → GND rail
 wire([(1060, 188), (1050, 188), (1050, 860), (42, 860)], GND_GRAY, 2.5)
 
-# OUT jack → Audio Out 1
-wire([(1060, 249), (820, 249), (820, 220), (750, 220)], AUDIO_OUT, 2.5)
-# OUT jack sleeve → GND
+# OUT jack → Audio Out 1 (right side, pin 18)
+aout_y = right_pin_y(18)
+wire([(1060, 249), (DS_X+DS_W+25, 249), (DS_X+DS_W+25, aout_y)], AUDIO_OUT, 2.5)
+# OUT jack sleeve → GND rail
 wire([(1060, 258), (1045, 258), (1045, 868), (42, 868)], GND_GRAY, 2.5)
 
-# AGND → GND rail
-wire([(750, 245), (730, 245), (730, 876), (42, 876)], GND_GRAY, 2.5)
+# AGND (right side, pin 20) → GND rail
+agnd_y = right_pin_y(20)
+wire([(DS_X+DS_W, agnd_y), (DS_X+DS_W+85, agnd_y), (DS_X+DS_W+85, 876), (42, 876)], GND_GRAY, 2.5)
 
-# Pot wipers → A0–A3
-POT_ADC = [(540, 550), (620, 590), (700, 630), (780, 670)]
+# Pot wipers → A0–A3 (left side, pins 22–25)
+# Route: wiper → left → route behind left components → enter Daisy left side
+POT_ADC = [
+    (540, left_pin_y(22)),
+    (620, left_pin_y(23)),
+    (700, left_pin_y(24)),
+    (780, left_pin_y(25)),
+]
 for ppy, apy in POT_ADC:
-    wire([(1086, ppy), (980, ppy), (980, apy), (750, apy)], ADC_BLUE, 2.5)
+    wire([(1086, ppy), (DS_X-55, ppy), (DS_X-55, apy), (DS_X, apy)], ADC_BLUE, 2.5)
 
 # Pot high lug → 3V3 rail
 for py in [540, 620, 700, 780]:
@@ -235,19 +262,22 @@ for py in [540, 620, 700, 780]:
 for py in [540, 620, 700, 780]:
     wire([(POT_X-6, py+34), (POT_X-6, py+55), (42, py+55)], GND_GRAY, 2)
 
-# Daisy 3V3 OUT → 3V3 rail
-wire([(750, 720), (870, 720), (870, 840), (62, 840)], POWER_RED, 2.5)
+# Daisy 3V3 OUT (left side, pin 38) → 3V3 rail
+v33_y = left_pin_y(38)
+wire([(DS_X, v33_y), (DS_X-25, v33_y), (DS_X-25, 840), (62, 840)], POWER_RED, 2.5)
 
-# Daisy DGND → GND rail
-wire([(750, 800), (880, 800), (880, 848), (42, 848)], GND_GRAY, 2.5)
+# Daisy DGND (left side, pin 40) → GND rail
+dgnd_y = left_pin_y(40)
+wire([(DS_X, dgnd_y), (DS_X-25, dgnd_y), (DS_X-25, 848), (42, 848)], GND_GRAY, 2.5)
 
-# DC jack + → VIN
-wire([(500, 920), (420, 920), (420, 760), (750, 760)], POWER_RED, 3)
-# DC jack - → GND rail
+# DC jack + → VIN (left side, pin 39)
+vin_y = left_pin_y(39)
+wire([(500, 920), (DS_X-70, 920), (DS_X-70, vin_y), (DS_X, vin_y)], POWER_RED, 3)
+# DC jack − → GND rail
 wire([(720, 920), (720, 890), (42, 890)], GND_GRAY, 3)
 
 # ─── Legend ───────────────────────────────────────────────────────────────────
-col('#eceae6'); rrect(940, 850, 400, 130); ctx.fill()
+col('#ffffff', 0.9); rrect(940, 850, 400, 130); ctx.fill()
 col('#cccccc'); ctx.set_line_width(1.5); rrect(940, 850, 400, 130); ctx.stroke()
 txt('LEGEND', 1140, 872, 14, 'center', True, '#444444')
 
