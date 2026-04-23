@@ -8,7 +8,7 @@
 #include <cstdio>
 
 using namespace daisy;
-using MyOled = OledDisplay<SSD130xI2c128x32Driver>;
+using MyOled = OledDisplay<SSD130xI2c128x64Driver>;
 
 enum {
     KNOB_KEY   = 0,
