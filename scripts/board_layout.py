@@ -79,52 +79,52 @@ def rail_pt(rail_x, ri):
 DS_START = 5
 DS_END   = 24   # inclusive (20 rows = 20 pins per side)
 
-# Left side  (col E = idx 4): pins 1–20
+# Left side (col E = idx 4): pins 21–40, top to bottom
 DS_LEFT = [
-    ('D30', '3V3 IN',     False),  # pin 1
-    ('D29', '',           False),
-    ('D28', '',           False),
-    ('D27', '',           False),
-    ('D26', '',           False),
-    ('D25', '← FOOTSW',  True),   # pin 6
-    ('D24', '',           False),
-    ('D23', '',           False),
-    ('D22', '← LED',     True),   # pin 9
-    ('D21', '',           False),
-    ('D20', '',           False),
-    ('D11', '→ SCL',     True),   # pin 12
-    ('D12', '→ SDA',     True),   # pin 13
-    ('D13', '',           False),
-    ('D14', '',           False),
-    ('',    'AUDIO IN L', True),   # pin 16
-    ('D10', '',           False),
-    ('',    'AUDIO OUT L',True),   # pin 18
-    ('D9',  '',           False),
-    ('',    'AGND',       True),   # pin 20
-]
-
-# Right side (col F = idx 5): pins 21–40
-DS_RIGHT = [
-    ('',    'GND',        True),   # pin 21
+    ('',    '3V3 Analog', False),  # pin 21
     ('A0',  '← K1 KEY',  True),   # pin 22
-    ('A1',  '← K2 SCL',  True),   # pin 23
+    ('A1',  '← K2 SCALE',True),   # pin 23
     ('A2',  '← K3 MIX',  True),   # pin 24
     ('A3',  '← K4 TUNE', True),   # pin 25
-    ('A4',  '',           False),
-    ('A5',  '',           False),
-    ('A6',  '',           False),
-    ('A7',  '',           False),
-    ('A8',  '',           False),
-    ('A9',  '',           False),
-    ('A10', '',           False),
-    ('A11', '',           False),
-    ('D6',  '',           False),
-    ('D5',  '',           False),
-    ('D4',  '',           False),
-    ('D3',  '',           False),
-    ('',    '3V3 OUT',    True),   # pin 38
-    ('',    'VIN',        True),   # pin 39
-    ('',    'DGND',       True),   # pin 40
+    ('A4',  '',           False),  # pin 26
+    ('A5',  '',           False),  # pin 27
+    ('A6',  '',           False),  # pin 28
+    ('D22', '← LED',     True),   # pin 29
+    ('A8',  '',           False),  # pin 30
+    ('A9',  '',           False),  # pin 31
+    ('D25', '← FOOTSW',  True),   # pin 32
+    ('D26', '',           False),  # pin 33
+    ('D27', '',           False),  # pin 34
+    ('D28', '',           False),  # pin 35
+    ('D29', '',           False),  # pin 36
+    ('D30', '',           False),  # pin 37
+    ('',    '3V3 OUT',    True),   # pin 38 → 3V3 rail
+    ('',    'VIN',        True),   # pin 39 ← DC jack
+    ('',    'DGND',       True),   # pin 40 → GND rail
+]
+
+# Right side (col F = idx 5): pins 20→1, top to bottom
+DS_RIGHT = [
+    ('',    'AGND',       True),   # pin 20 → GND rail
+    ('',    'Audio Out 2',False),  # pin 19
+    ('',    'Audio Out 1',True),   # pin 18 → output jack
+    ('',    'Audio In 2', False),  # pin 17
+    ('',    'Audio In 1', True),   # pin 16 → input jack
+    ('D14', '',           False),  # pin 15
+    ('D13', '',           False),  # pin 14
+    ('D12', '→ SDA',     True),   # pin 13
+    ('D11', '→ SCL',     True),   # pin 12
+    ('D10', '',           False),  # pin 11
+    ('D9',  '',           False),  # pin 10
+    ('D8',  '',           False),  # pin 9
+    ('D7',  '',           False),  # pin 8
+    ('D6',  '',           False),  # pin 7
+    ('D5',  '',           False),  # pin 6
+    ('D4',  '',           False),  # pin 5
+    ('D3',  '',           False),  # pin 4
+    ('D2',  '',           False),  # pin 3
+    ('D1',  '',           False),  # pin 2
+    ('D0',  '',           False),  # pin 1
 ]
 
 # ─── Cairo setup ──────────────────────────────────────────────────────────────
@@ -285,10 +285,12 @@ txt('SEED',  SEED_X + SEED_W/2, SEED_Y + SEED_H/2 + mm(1.2), 2.2, 'center', True
 # Left side (col E, labels go rightward from col D toward left)
 lbl_x = ex0 - mm(1.4)
 PIN_COLOR = {
-    'D25': WIRE_FS,   'D22': WIRE_LED,
+    'D22': WIRE_LED,  'D25': WIRE_FS,
     'D11': WIRE_I2C,  'D12': WIRE_I2C,
-    'AUDIO IN L': WIRE_AIN, 'AUDIO OUT L': WIRE_AOUT,
-    'AGND': WIRE_GND,
+    'Audio In 1': WIRE_AIN, 'Audio Out 1': WIRE_AOUT,
+    'AGND': WIRE_GND, 'DGND': WIRE_GND,
+    '3V3 OUT': WIRE_3V3, 'VIN': WIRE_3V3,
+    'A0': WIRE_ADC, 'A1': WIRE_ADC, 'A2': WIRE_ADC, 'A3': WIRE_ADC,
 }
 for i, (pin, note, highlight) in enumerate(DS_LEFT):
     ri = DS_START + i
@@ -311,15 +313,10 @@ for i, (pin, note, highlight) in enumerate(DS_RIGHT):
         c = '#aaaaaa'
     else:
         s = pin if not note else (f'{pin} {note}' if pin else note)
-        c = PIN_COLOR.get(pin, PIN_COLOR.get(note.split()[0] if note else '', '#444444'))
-        if '3V3' in note or 'VIN' in note:
-            c = WIRE_3V3
-        elif 'GND' in note or 'GND' in pin:
-            c = WIRE_GND
-        elif 'K1' in note: c = WIRE_ADC
-        elif 'K2' in note: c = WIRE_ADC
-        elif 'K3' in note: c = WIRE_ADC
-        elif 'K4' in note: c = WIRE_ADC
+        c = PIN_COLOR.get(pin, PIN_COLOR.get(note, '#444444'))
+        if 'Audio Out' in note: c = WIRE_AOUT
+        elif 'Audio In' in note: c = WIRE_AIN
+        elif 'AGND' in note or 'AGND' in pin: c = WIRE_GND
     txt(s, rbl_x, cy + mm(0.5), 1.55, 'left', highlight, c)
 
 # ─── Wires ────────────────────────────────────────────────────────────────────
@@ -327,81 +324,86 @@ for i, (pin, note, highlight) in enumerate(DS_RIGHT):
 def pp(ci, ri): return pad_pt(ci, ri)
 def rp(rx, ri): return rail_pt(rx, ri)
 
-# AGND (left pin row 19) → left − rail
+# DGND (left col E, pin 40, row DS_START+19) → left − rail
 wire([pp(4, DS_START+19), pp(3, DS_START+19), pp(2, DS_START+19),
       rp(RAIL_L_NEG_X, DS_START+19)], WIRE_GND, 0.45)
 
-# DGND (right pin row 19) → right − rail
-wire([pp(5, DS_START+19), pp(6, DS_START+19),
-      rp(RAIL_R_NEG_X, DS_START+19)], WIRE_GND, 0.45)
+# AGND (right col F, pin 20, row DS_START+0) → right − rail
+wire([pp(5, DS_START+0), pp(6, DS_START+0),
+      rp(RAIL_R_NEG_X, DS_START+0)], WIRE_GND, 0.45)
 
-# 3V3 OUT (right pin row 17) → left + rail (routed across bottom)
-p5r17 = pp(5, DS_START+17)
-bot_y  = PCB_Y + mm(PCB_H_MM - 3.0)
-wire([p5r17,
-      (p5r17[0] + mm(4), p5r17[1]),
-      (p5r17[0] + mm(4), bot_y),
-      (PCB_X + mm(RAIL_L_POS_X), bot_y),
-      rp(RAIL_L_POS_X, ROWS-1)], WIRE_3V3, 0.45)
+# 3V3 OUT (left col E, pin 38, row DS_START+17) → left + rail
+wire([pp(4, DS_START+17), pp(3, DS_START+17), pp(2, DS_START+17),
+      rp(RAIL_L_POS_X, DS_START+17)], WIRE_3V3, 0.45)
 
-# VIN (right pin row 18) to off-board (arrow only — DC jack goes off-board)
-p5r18 = pp(5, DS_START+18)
-wire([p5r18, (p5r18[0] + mm(3), p5r18[1])], WIRE_3V3, 0.45)
+# VIN (left col E, pin 39, row DS_START+18) — stub to left edge (DC jack off-board)
+p4r18 = pp(4, DS_START+18)
+wire([p4r18, (p4r18[0] - mm(3), p4r18[1])], WIRE_3V3, 0.45)
 
-# ADC: A0-A3 (right col F rows 1-4) → col H (right side, connection points)
+# ADC A0–A3 (left col E, rows DS_START+1 to DS_START+4) → col C
 for k in range(4):
     ri = DS_START + 1 + k
-    wire([pp(5, ri), pp(7, ri)], WIRE_ADC, 0.45)
+    wire([pp(4, ri), pp(3, ri), pp(2, ri)], WIRE_ADC, 0.45)
 
-# I2C: SCL D11 / SDA D12 → col C
-wire([pp(4, DS_START+11), pp(3, DS_START+11), pp(2, DS_START+11)], WIRE_I2C, 0.45)
-wire([pp(4, DS_START+12), pp(3, DS_START+12), pp(2, DS_START+12)], WIRE_I2C, 0.45)
-
-# LED D22 → col C
+# LED D22 (left col E, pin 29, row DS_START+8) → col C
 wire([pp(4, DS_START+8), pp(3, DS_START+8), pp(2, DS_START+8)], WIRE_LED, 0.45)
 
-# Footswitch D25 → col C
-wire([pp(4, DS_START+5), pp(3, DS_START+5), pp(2, DS_START+5)], WIRE_FS, 0.45)
+# Footswitch D25 (left col E, pin 32, row DS_START+11) → col C
+wire([pp(4, DS_START+11), pp(3, DS_START+11), pp(2, DS_START+11)], WIRE_FS, 0.45)
 
-# Audio IN → col C
-wire([pp(4, DS_START+15), pp(3, DS_START+15), pp(2, DS_START+15)], WIRE_AIN, 0.45)
+# I2C D12 SDA (right col F, pin 13, row DS_START+7) → col H
+wire([pp(5, DS_START+7), pp(6, DS_START+7), pp(7, DS_START+7)], WIRE_I2C, 0.45)
 
-# Audio OUT → col C
-wire([pp(4, DS_START+17), pp(3, DS_START+17), pp(2, DS_START+17)], WIRE_AOUT, 0.45)
+# I2C D11 SCL (right col F, pin 12, row DS_START+8) → col H
+wire([pp(5, DS_START+8), pp(6, DS_START+8), pp(7, DS_START+8)], WIRE_I2C, 0.45)
+
+# Audio In 1 (right col F, pin 16, row DS_START+4) → col H
+wire([pp(5, DS_START+4), pp(6, DS_START+4), pp(7, DS_START+4)], WIRE_AIN, 0.45)
+
+# Audio Out 1 (right col F, pin 18, row DS_START+2) → col H
+wire([pp(5, DS_START+2), pp(6, DS_START+2), pp(7, DS_START+2)], WIRE_AOUT, 0.45)
 
 # Highlight connection pads with ring
 RINGS = [
-    (2, DS_START+11, WIRE_I2C),
-    (2, DS_START+12, WIRE_I2C),
-    (2, DS_START+8,  WIRE_LED),
-    (2, DS_START+5,  WIRE_FS),
-    (2, DS_START+15, WIRE_AIN),
-    (2, DS_START+17, WIRE_AOUT),
-    (7, DS_START+1,  WIRE_ADC),
-    (7, DS_START+2,  WIRE_ADC),
-    (7, DS_START+3,  WIRE_ADC),
-    (7, DS_START+4,  WIRE_ADC),
+    # Left side connection points (col C)
+    (2, DS_START+1,  WIRE_ADC),   # A0 K1
+    (2, DS_START+2,  WIRE_ADC),   # A1 K2
+    (2, DS_START+3,  WIRE_ADC),   # A2 K3
+    (2, DS_START+4,  WIRE_ADC),   # A3 K4
+    (2, DS_START+8,  WIRE_LED),   # D22 LED
+    (2, DS_START+11, WIRE_FS),    # D25 footswitch
+    # Right side connection points (col H)
+    (7, DS_START+2,  WIRE_AOUT),  # Audio Out 1
+    (7, DS_START+4,  WIRE_AIN),   # Audio In 1
+    (7, DS_START+7,  WIRE_I2C),   # D12 SDA
+    (7, DS_START+8,  WIRE_I2C),   # D11 SCL
 ]
 for ci, ri, c in RINGS:
     px, py = pad_pt(ci, ri)
     col(c); ctx.set_line_width(mm(0.4)); circ(px, py, PAD_R + mm(0.5)); ctx.stroke()
 
-# ─── Off-board connection labels (right side of right rails) ──────────────────
+# ─── Off-board connection labels ──────────────────────────────────────────────
+# Right side (col H → right of right rails)
 RX_LBL = PCB_X + mm(RAIL_R_NEG_X) + mm(2.0)
-ADC_LABELS = ['K1 KEY wiper', 'K2 SCALE wiper', 'K3 MIX wiper', 'K4 TUNE wiper']
-for k, label in enumerate(ADC_LABELS):
-    _, cy = pad_pt(7, DS_START + 1 + k)
-    txt(f'→ {label}', RX_LBL, cy + mm(0.5), 1.8, 'left', False, WIRE_ADC)
+RIGHT_OB = {
+    DS_START+2: ('→ OUT jack tip', WIRE_AOUT),
+    DS_START+4: ('→ IN jack tip',  WIRE_AIN),
+    DS_START+7: ('→ OLED SDA',    WIRE_I2C),
+    DS_START+8: ('→ OLED SCL',    WIRE_I2C),
+}
+for ri, (label, c) in RIGHT_OB.items():
+    _, cy = pad_pt(7, ri)
+    txt(label, RX_LBL, cy + mm(0.5), 1.8, 'left', False, c)
 
-# Left off-board labels
+# Left side (col C → left of left rails)
 LX_LBL = PCB_X - mm(1.5)
 LEFT_OB = {
-    DS_START+11: ('← OLED SCL',   WIRE_I2C),
-    DS_START+12: ('← OLED SDA',   WIRE_I2C),
-    DS_START+8:  ('← LED + 470Ω', WIRE_LED),
-    DS_START+5:  ('← FOOTSW',     WIRE_FS),
-    DS_START+15: ('← IN jack',    WIRE_AIN),
-    DS_START+17: ('← OUT jack',   WIRE_AOUT),
+    DS_START+1:  ('← K1 KEY wiper',   WIRE_ADC),
+    DS_START+2:  ('← K2 SCALE wiper', WIRE_ADC),
+    DS_START+3:  ('← K3 MIX wiper',   WIRE_ADC),
+    DS_START+4:  ('← K4 TUNE wiper',  WIRE_ADC),
+    DS_START+8:  ('← LED + 470Ω',     WIRE_LED),
+    DS_START+11: ('← FOOTSW pin 1',   WIRE_FS),
 }
 for ri, (label, c) in LEFT_OB.items():
     _, cy = pad_pt(2, ri)
