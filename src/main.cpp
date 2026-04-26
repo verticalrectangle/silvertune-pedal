@@ -36,15 +36,16 @@ static YinDetector  yin;
 static GrainShifter shifter;
 static GrainShifter doubler;
 
-static bool  engaged     = true;
-static float held_ratio  = 1.0f;
+static bool     engaged      = true;
+static float    held_ratio   = 1.0f;
+static volatile int8_t current_note = -1; // 0-11, or -1 when no pitch
 
 static volatile float v_key   = 0.0f;
 static volatile float v_scale = 0.0f;
 static volatile float v_mix   = 0.5f;
 static volatile float v_tune  = 1.0f;
 static volatile int   root_key  = 0;
-static volatile int   scale_idx = 1;  // 0=chromatic, 1=major, 2=minor
+static volatile int   scale_idx = 1;
 
 static inline float knob(float v) {
     return std::clamp((v - 0.04f) / 0.95f, 0.0f, 1.0f);
@@ -81,6 +82,7 @@ static void audio_callback(AudioHandle::InputBuffer in,
         held_ratio = target_hz / yin.pitch_hz;
         held_ratio = 1.0f + (held_ratio - 1.0f) * snap;
         held_ratio = std::clamp(held_ratio, 0.5f, 2.0f);
+        current_note = nearest_midi % 12;
     }
     float pitch_ratio = held_ratio;
 
@@ -97,21 +99,83 @@ static void audio_callback(AudioHandle::InputBuffer in,
     }
 }
 
+// Piano layout: right 56px (x=72..127), full height
+static constexpr int PX = 72;
+static constexpr int PY = 8;
+static constexpr int WW = 8;   // white key width
+static constexpr int WH = 56;  // white key height
+static constexpr int BW = 5;   // black key width
+static constexpr int BH = 32;  // black key height
+
+// note 0=C, white keys: C D E F G A B → notes 0 2 4 5 7 9 11
+static const int8_t WHITE_NOTE[7] = {0, 2, 4, 5, 7, 9, 11};
+// black key x offsets (relative to PX) and their notes
+static const int8_t BLACK_REL_X[5] = {3, 11, 27, 35, 43};
+static const int8_t BLACK_NOTE[5]  = {1, 3,  6,  8,  10};
+
+static void fill_rect(int x, int y, int w, int h, bool on) {
+    for (int iy = y; iy < y + h; iy++)
+        for (int ix = x; ix < x + w; ix++)
+            display.DrawPixel(ix, iy, on);
+}
+
+static void draw_piano(int8_t active) {
+    // White keys: outlined normally, filled when active
+    for (int i = 0; i < 7; i++) {
+        int x0 = PX + i * WW;
+        bool lit = (WHITE_NOTE[i] == active);
+        fill_rect(x0, PY, WW, WH, lit);
+        if (!lit) {
+            for (int y = PY; y < PY + WH; y++) {
+                display.DrawPixel(x0,          y, true);
+                display.DrawPixel(x0 + WW - 1, y, true);
+            }
+            for (int x = x0; x < x0 + WW; x++) {
+                display.DrawPixel(x, PY,          true);
+                display.DrawPixel(x, PY + WH - 1, true);
+            }
+        }
+    }
+
+    // Black keys: dark interior + white border; filled white when active
+    for (int i = 0; i < 5; i++) {
+        int x0 = PX + BLACK_REL_X[i];
+        bool lit = (BLACK_NOTE[i] == active);
+        fill_rect(x0, PY, BW, BH, lit);
+        if (!lit) {
+            for (int y = PY; y < PY + BH; y++) {
+                display.DrawPixel(x0,          y, true);
+                display.DrawPixel(x0 + BW - 1, y, true);
+            }
+            for (int x = x0; x < x0 + BW; x++) {
+                display.DrawPixel(x, PY,          true);
+                display.DrawPixel(x, PY + BH - 1, true);
+            }
+        }
+    }
+}
+
 static void update_display(bool show_temp, const char* temp_msg) {
     display.Fill(false);
-    if (show_temp) {
+    if (!engaged) {
+        display.SetCursor(0, 11);
+        display.WriteString(const_cast<char*>("BYPASS"), Font_7x10, true);
+    } else if (show_temp) {
         display.SetCursor(0, 11);
         display.WriteString(const_cast<char*>(temp_msg), Font_7x10, true);
-    } else if (scale_idx == 0) {
-        display.SetCursor(0, 11);
-        display.WriteString(const_cast<char*>("CHROMATIC"), Font_7x10, true);
     } else {
-        char key[4];
-        snprintf(key, sizeof(key), "%s", KEY_NAMES[root_key]);
-        display.SetCursor(0, 0);
-        display.WriteString(key, Font_11x18, true);
-        display.SetCursor(0, 22);
-        display.WriteString(const_cast<char*>(SCALE_NAMES[scale_idx]), Font_6x8, true);
+        if (scale_idx == 0) {
+            display.SetCursor(0, 11);
+            display.WriteString(const_cast<char*>("CHROM"), Font_7x10, true);
+        } else {
+            char key[4];
+            snprintf(key, sizeof(key), "%s", KEY_NAMES[root_key]);
+            display.SetCursor(0, 0);
+            display.WriteString(key, Font_11x18, true);
+            display.SetCursor(0, 22);
+            display.WriteString(const_cast<char*>(SCALE_NAMES[scale_idx]), Font_6x8, true);
+        }
+        draw_piano(engaged ? current_note : -1);
     }
     display.Update();
 }
@@ -123,22 +187,18 @@ int main(void) {
 
     float sr = hw.AudioSampleRate();
 
-    // ADC for 6 knobs
     AdcChannelConfig adc_cfg[KNOB_COUNT];
-    for (int i = 0; i < KNOB_COUNT; ++i)
+    for (int i = 0; i < KNOB_COUNT; i++)
         adc_cfg[i].InitSingle(KNOB_PINS[i]);
     hw.adc.Init(adc_cfg, KNOB_COUNT);
     hw.adc.Start();
 
-    // Footswitch
     footswitch.Init(PIN_FOOTSWITCH, 1000.0f / 48.0f);
 
-    // LED
     led.Init(PIN_LED, false);
     led.Set(1.0f);
     led.Update();
 
-    // OLED
     MyOled::Config oled_cfg;
     oled_cfg.driver_config.transport_config.i2c_config.periph =
         I2CHandle::Config::Peripheral::I2C_1;
@@ -149,26 +209,23 @@ int main(void) {
     oled_cfg.driver_config.transport_config.i2c_address = 0x3C;
     display.Init(oled_cfg);
 
-    // DSP
     yin.init(sr);
     shifter.reset();
     doubler.reset();
 
-    // Start audio
     hw.StartAudio(audio_callback);
 
-    // Snapshot initial knob state so startup doesn't trigger temp messages
     float prev_key   = v_key;
     float prev_scale = v_scale;
     float prev_mix   = v_mix;
     float prev_tune  = v_tune;
 
     constexpr float    THRESH      = 0.02f;
-    constexpr uint32_t HOLD_MS    = 2000;
-    constexpr uint32_t DISPLAY_MS = 50;
-    uint32_t timeout_ms     = 0;
-    uint32_t next_display   = 0;
-    char     temp_msg[32]   = "";
+    constexpr uint32_t HOLD_MS     = 2000;
+    constexpr uint32_t DISPLAY_MS  = 50;
+    uint32_t timeout_ms  = 0;
+    uint32_t next_display = 0;
+    char     temp_msg[32] = "";
 
     while (true) {
         if (yin.pending)
