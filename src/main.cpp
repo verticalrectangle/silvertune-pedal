@@ -42,6 +42,10 @@ static volatile float v_tune  = 1.0f;
 static volatile int   root_key  = 0;
 static volatile int   scale_idx = 1;  // 0=chromatic, 1=major, 2=minor
 
+static inline float knob(float v) {
+    return std::clamp((v - 0.04f) / 0.95f, 0.0f, 1.0f);
+}
+
 static const char* KEY_NAMES[12]  = { "C","C#","D","D#","E","F","F#","G","G#","A","A#","B" };
 static const char* SCALE_NAMES[3] = { "CHROMATIC", "MAJOR", "MINOR" };
 static const ScaleType SCALE_MAP[3] = { SCALE_CHROMATIC, SCALE_MAJOR, SCALE_MINOR };
@@ -53,10 +57,10 @@ static void audio_callback(AudioHandle::InputBuffer in,
     if (footswitch.RisingEdge())
         engaged = !engaged;
 
-    v_key   = hw.adc.GetFloat(KNOB_KEY);
-    v_scale = hw.adc.GetFloat(KNOB_SCALE);
-    v_mix   = hw.adc.GetFloat(KNOB_MIX);
-    v_tune  = hw.adc.GetFloat(KNOB_TUNE);
+    v_key   = knob(hw.adc.GetFloat(KNOB_KEY));
+    v_scale = knob(hw.adc.GetFloat(KNOB_SCALE));
+    v_mix   = knob(hw.adc.GetFloat(KNOB_MIX));
+    v_tune  = knob(hw.adc.GetFloat(KNOB_TUNE));
 
     root_key  = std::clamp((int)(v_key * 11.99f), 0, 11);
     scale_idx = std::clamp((int)(v_scale * 2.99f), 0, 2);
@@ -65,28 +69,24 @@ static void audio_callback(AudioHandle::InputBuffer in,
     float snap = std::clamp((float)v_tune, 0.0f, 1.0f);
     float mix  = std::clamp((float)v_mix,  0.0f, 1.0f);
 
+    float pitch_ratio = 1.0f;
+    if (yin.pitch_hz > 50.0f && yin.pitch_hz < 2000.0f && yin.confidence > 0.5f) {
+        float detected_midi = hz_to_midi(yin.pitch_hz);
+        int nearest_midi = quantize_to_scale(
+            static_cast<int>(std::round(detected_midi)), root_key, scale);
+        float target_hz = midi_to_hz(static_cast<float>(nearest_midi));
+        pitch_ratio = target_hz / yin.pitch_hz;
+        pitch_ratio = 1.0f + (pitch_ratio - 1.0f) * snap;
+        pitch_ratio = std::clamp(pitch_ratio, 0.5f, 2.0f);
+    }
+
     for (size_t i = 0; i < size; ++i) {
         float dry = in[0][i];
-
         if (!engaged) {
             out[0][i] = dry;
             continue;
         }
-
         yin.push_sample(dry);
-
-        float pitch_ratio = 1.0f;
-        if (yin.pitch_hz > 50.0f && yin.pitch_hz < 2000.0f && yin.confidence > 0.6f) {
-            float detected_midi = hz_to_midi(yin.pitch_hz);
-            int nearest_midi = quantize_to_scale(
-                static_cast<int>(std::round(detected_midi)), root_key, scale);
-            float target_hz = midi_to_hz(static_cast<float>(nearest_midi));
-
-            pitch_ratio = target_hz / yin.pitch_hz;
-            pitch_ratio = 1.0f + (pitch_ratio - 1.0f) * snap;
-            pitch_ratio = std::clamp(pitch_ratio, 0.5f, 2.0f);
-        }
-
         float wet = shifter.process(dry, static_cast<double>(pitch_ratio));
         out[0][i] = dry * (1.0f - mix) + wet * mix;
     }
