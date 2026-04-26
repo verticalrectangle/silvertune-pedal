@@ -33,7 +33,8 @@ static MyOled     display;
 static YinDetector  yin;
 static GrainShifter shifter;
 
-static bool engaged = true;
+static bool  engaged     = true;
+static float held_ratio  = 1.0f;
 
 static volatile float v_key   = 0.0f;
 static volatile float v_scale = 0.0f;
@@ -69,16 +70,16 @@ static void audio_callback(AudioHandle::InputBuffer in,
     float snap = std::clamp((float)v_tune, 0.0f, 1.0f);
     float mix  = std::clamp((float)v_mix,  0.0f, 1.0f);
 
-    float pitch_ratio = 1.0f;
     if (yin.pitch_hz > 50.0f && yin.pitch_hz < 2000.0f && yin.confidence > 0.5f) {
         float detected_midi = hz_to_midi(yin.pitch_hz);
         int nearest_midi = quantize_to_scale(
             static_cast<int>(std::round(detected_midi)), root_key, scale);
         float target_hz = midi_to_hz(static_cast<float>(nearest_midi));
-        pitch_ratio = target_hz / yin.pitch_hz;
-        pitch_ratio = 1.0f + (pitch_ratio - 1.0f) * snap;
-        pitch_ratio = std::clamp(pitch_ratio, 0.5f, 2.0f);
+        held_ratio = target_hz / yin.pitch_hz;
+        held_ratio = 1.0f + (held_ratio - 1.0f) * snap;
+        held_ratio = std::clamp(held_ratio, 0.5f, 2.0f);
     }
+    float pitch_ratio = held_ratio;
 
     for (size_t i = 0; i < size; ++i) {
         float dry = in[0][i];
