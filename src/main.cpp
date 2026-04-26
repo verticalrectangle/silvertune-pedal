@@ -13,7 +13,7 @@ using MyOled = OledDisplay<SSD130xI2c128x64Driver>;
 enum {
     KNOB_KEY   = 0,
     KNOB_SCALE = 1,
-    KNOB_MIX   = 2,
+    KNOB_WIDE  = 2,
     KNOB_TUNE  = 3,
     KNOB_COUNT = 6
 };
@@ -30,8 +30,11 @@ static Switch     footswitch;
 static Led        led;
 static MyOled     display;
 
+static constexpr float DETUNE = 1.00463f; // +8 cents
+
 static YinDetector  yin;
 static GrainShifter shifter;
+static GrainShifter doubler;
 
 static bool  engaged     = true;
 static float held_ratio  = 1.0f;
@@ -60,7 +63,7 @@ static void audio_callback(AudioHandle::InputBuffer in,
 
     v_key   = knob(hw.adc.GetFloat(KNOB_KEY));
     v_scale = knob(hw.adc.GetFloat(KNOB_SCALE));
-    v_mix   = knob(hw.adc.GetFloat(KNOB_MIX));
+    v_mix   = knob(hw.adc.GetFloat(KNOB_WIDE));
     v_tune  = knob(hw.adc.GetFloat(KNOB_TUNE));
 
     root_key  = std::clamp((int)(v_key * 11.99f), 0, 11);
@@ -89,7 +92,8 @@ static void audio_callback(AudioHandle::InputBuffer in,
         }
         yin.push_sample(dry);
         float wet = shifter.process(dry, static_cast<double>(pitch_ratio));
-        out[0][i] = dry * (1.0f - mix) + wet * mix;
+        float dbl = doubler.process(dry, static_cast<double>(pitch_ratio * DETUNE));
+        out[0][i] = wet + dbl * mix;
     }
 }
 
@@ -148,6 +152,7 @@ int main(void) {
     // DSP
     yin.init(sr);
     shifter.reset();
+    doubler.reset();
 
     // Start audio
     hw.StartAudio(audio_callback);
@@ -184,7 +189,7 @@ int main(void) {
                 timeout_ms = now + HOLD_MS;
                 prev_scale = cs;
             } else if (fabsf(cm - prev_mix) > THRESH) {
-                snprintf(temp_msg, sizeof(temp_msg), "MIX: %d%%", (int)(cm * 100));
+                snprintf(temp_msg, sizeof(temp_msg), "WIDE: %d%%", (int)(cm * 100));
                 timeout_ms = now + HOLD_MS;
                 prev_mix = cm;
             } else if (fabsf(ct - prev_tune) > THRESH) {

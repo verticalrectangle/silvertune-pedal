@@ -25,6 +25,7 @@ void GrainShifter::reset() {
     write_pos = 0;
     phase_a = 0.0;
     phase_b = 0.5;
+    grain_size = 256;
 }
 
 float GrainShifter::process(float in, double pitch_ratio) {
