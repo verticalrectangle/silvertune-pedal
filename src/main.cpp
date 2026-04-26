@@ -73,7 +73,7 @@ static void audio_callback(AudioHandle::InputBuffer in,
             continue;
         }
 
-        yin.push(dry);
+        yin.push_sample(dry);
 
         float pitch_ratio = 1.0f;
         if (yin.pitch_hz > 50.0f && yin.pitch_hz < 2000.0f && yin.confidence > 0.6f) {
@@ -157,39 +157,45 @@ int main(void) {
     float prev_mix   = v_mix;
     float prev_tune  = v_tune;
 
-    constexpr float    THRESH  = 0.02f;
-    constexpr uint32_t HOLD_MS = 2000;
-    uint32_t timeout_ms = 0;
-    char     temp_msg[32] = "";
+    constexpr float    THRESH      = 0.02f;
+    constexpr uint32_t HOLD_MS    = 2000;
+    constexpr uint32_t DISPLAY_MS = 50;
+    uint32_t timeout_ms     = 0;
+    uint32_t next_display   = 0;
+    char     temp_msg[32]   = "";
 
     while (true) {
+        if (yin.pending)
+            yin.run_detect();
+
         uint32_t now = System::GetNow();
+        if (now >= next_display) {
+            next_display = now + DISPLAY_MS;
 
-        float ck = v_key, cs = v_scale, cm = v_mix, ct = v_tune;
+            float ck = v_key, cs = v_scale, cm = v_mix, ct = v_tune;
 
-        if (fabsf(ck - prev_key) > THRESH) {
-            snprintf(temp_msg, sizeof(temp_msg), "KEY: %s", KEY_NAMES[root_key]);
-            timeout_ms = now + HOLD_MS;
-            prev_key = ck;
-        } else if (fabsf(cs - prev_scale) > THRESH) {
-            snprintf(temp_msg, sizeof(temp_msg), "SCALE: %s", SCALE_NAMES[scale_idx]);
-            timeout_ms = now + HOLD_MS;
-            prev_scale = cs;
-        } else if (fabsf(cm - prev_mix) > THRESH) {
-            snprintf(temp_msg, sizeof(temp_msg), "MIX: %d%%", (int)(cm * 100));
-            timeout_ms = now + HOLD_MS;
-            prev_mix = cm;
-        } else if (fabsf(ct - prev_tune) > THRESH) {
-            snprintf(temp_msg, sizeof(temp_msg), "TUNE: %d%%", (int)(ct * 100));
-            timeout_ms = now + HOLD_MS;
-            prev_tune = ct;
+            if (fabsf(ck - prev_key) > THRESH) {
+                snprintf(temp_msg, sizeof(temp_msg), "KEY: %s", KEY_NAMES[root_key]);
+                timeout_ms = now + HOLD_MS;
+                prev_key = ck;
+            } else if (fabsf(cs - prev_scale) > THRESH) {
+                snprintf(temp_msg, sizeof(temp_msg), "SCALE: %s", SCALE_NAMES[scale_idx]);
+                timeout_ms = now + HOLD_MS;
+                prev_scale = cs;
+            } else if (fabsf(cm - prev_mix) > THRESH) {
+                snprintf(temp_msg, sizeof(temp_msg), "MIX: %d%%", (int)(cm * 100));
+                timeout_ms = now + HOLD_MS;
+                prev_mix = cm;
+            } else if (fabsf(ct - prev_tune) > THRESH) {
+                snprintf(temp_msg, sizeof(temp_msg), "TUNE: %d%%", (int)(ct * 100));
+                timeout_ms = now + HOLD_MS;
+                prev_tune = ct;
+            }
+
+            update_display(now < timeout_ms, temp_msg);
+
+            led.Set(engaged ? 1.0f : 0.0f);
+            led.Update();
         }
-
-        update_display(now < timeout_ms, temp_msg);
-
-        led.Set(engaged ? 1.0f : 0.0f);
-        led.Update();
-
-        System::Delay(50);
     }
 }
