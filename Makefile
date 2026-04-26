@@ -8,6 +8,7 @@ CPP_SOURCES = \
 	src/scale.cpp
 
 OPT = -O2
+CPP_STANDARD = -std=gnu++17
 
 LIBDAISY_DIR = lib/libDaisy
 DAISYSP_DIR = lib/DaisySP
