@@ -6,7 +6,7 @@ class YinDetector {
 public:
     static constexpr uint32_t BUF_SIZE = 1024;
     static constexpr uint32_t HALF     = BUF_SIZE / 2;
-    static constexpr uint32_t HOP_SIZE = 128;
+    static constexpr uint32_t HOP_SIZE = 512;
 
     float pitch_hz   = 0.0f;
     float confidence = 0.0f;
