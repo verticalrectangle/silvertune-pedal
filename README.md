@@ -107,7 +107,7 @@ make program-dfu
 Mic → Inline Impedance Matching Transformer → Silvertune Pedal → Amp
 ```
 
-An inline impedance matching transformer (XLR female → 1/4" male, e.g. Shure A85F or similar) brings the mic signal up to instrument level and matches impedance — no interface, no mixer, no phantom power needed. Plug straight into the pedal's input jack.
+An inline impedance matching transformer (XLR female → 1/4" male, e.g. Shure A85F or similar) brings a dynamic mic signal up to instrument level and matches impedance — no interface, no mixer, no phantom power needed. Plug straight into the pedal's input jack.
 
 ## How it works
 
