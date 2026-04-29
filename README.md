@@ -29,7 +29,7 @@ Total: ~$55-65. All through-hole. No SMD. Soldering iron and patience.
 |---------|----------|-------|
 | KEY | Root key | C through B |
 | SCALE | Scale | Chromatic → Major → Minor |
-| MIX | Dry/Wet blend | 0% dry → 100% wet |
+| WIDE | Doubler blend | 0% = off, 100% = full doubler |
 | TUNE | Tune Strength | 0% = no correction, 100% = full robot |
 | Footswitch | Bypass | Toggle on/off |
 | LED | Status | On when engaged |
@@ -40,7 +40,7 @@ The OLED shows the current state at a glance:
 
 - **Default (key set):** large key name on top, scale name below — e.g. `C#` / `MAJOR`
 - **Default (chromatic):** just `CHROMATIC` centered
-- **While adjusting a knob:** shows that parameter's value for 2 seconds, then returns — e.g. `MIX: 75%`, `KEY: C#`, `TUNE: 100%`, `SCALE: MAJOR`
+- **While adjusting a knob:** shows that parameter's value for 2 seconds, then returns — e.g. `WIDE: 75%`, `KEY: C#`, `TUNE: 100%`, `SCALE: MAJOR`
 
 The display mirrors the Silvertune plugin interface in a DAW.
 
@@ -103,15 +103,11 @@ make program-dfu
 
 ## Live vocal setup
 
-The Daisy Seed expects line/instrument level, not raw mic level. You need a preamp or DI box between your mic and the pedal.
-
 ```
-Mic (XLR) → Preamp/DI Box (XLR in, 1/4" out) → Silvertune Pedal → PA / Mixer
+Mic → Inline Impedance Matching Transformer → Silvertune Pedal → Amp
 ```
 
-Two easy options:
-- **USB audio interface** (e.g. Arturia Minifuse 1): Mic → XLR in, turn on direct monitor, 1/4" out → pedal.
-- **Small mixer** (e.g. Behringer Xenyx 502, ~$40): XLR in with built-in preamp, 1/4" out → pedal.
+An inline impedance matching transformer (XLR female → 1/4" male, e.g. Shure A85F or similar) brings the mic signal up to instrument level and matches impedance — no interface, no mixer, no phantom power needed. Plug straight into the pedal's input jack.
 
 ## How it works
 
@@ -119,7 +115,7 @@ Two easy options:
 2. A bare YIN pitch detector (~80 lines, no dependencies) finds the fundamental frequency
 3. The detected pitch is quantized to the nearest note in the selected key/scale
 4. A two-tap grain shifter with Hann window crossfade shifts the pitch to the target note
-5. Mix knob blends dry and corrected signal
+5. WIDE knob blends in a second pitch-shifted voice detuned +8 cents for a doubler effect
 6. Zero latency. No FFT. No buffering. Sample by sample.
 
 ## License
